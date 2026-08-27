@@ -7,8 +7,8 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const STORE_ID = process.env.VITE_NUVEMSHOP_STORE_ID || '6416066';
-  const ACCESS_TOKEN = process.env.VITE_NUVEMSHOP_ACCESS_TOKEN;
+  const STORE_ID = process.env.NUVEMSHOP_STORE_ID || '6416066';
+const ACCESS_TOKEN = process.env.NUVEMSHOP_ACCESS_TOKEN;
   const USER_AGENT = 'PontoDoBorracheiro (contato@pontodoborracheiro.com.br)';
 
   if (!ACCESS_TOKEN) {
