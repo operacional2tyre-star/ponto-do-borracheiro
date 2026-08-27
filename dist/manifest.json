@@ -1,0 +1,22 @@
+{
+  "name": "Ponto do Borracheiro",
+  "short_name": "PontoBorra",
+  "description": "Tudo para sua borracharia em Maringá",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#DC2626",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

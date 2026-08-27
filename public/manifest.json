@@ -1,0 +1,18 @@
+{
+  "name": "Ponto do Borracheiro",
+  "short_name": "PdB",
+  "description": "Pneus, câmaras de ar e acessórios para borracharia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#DC2626",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
