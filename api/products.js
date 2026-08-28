@@ -1,11 +1,12 @@
 let cachedProducts = null;
 let cacheTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -13,6 +14,7 @@ export default async function handler(req, res) {
 
   // Retorna do cache se ainda válido
   if (cachedProducts && (Date.now() - cacheTime) < CACHE_DURATION) {
+    console.log(`[API] Retornando ${cachedProducts.length} produtos do cache`);
     return res.status(200).json(cachedProducts);
   }
 
@@ -77,21 +79,52 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('[API] Buscando produtos da Nuvemshop...');
+    const startTime = Date.now();
     let page = 1;
     const allProducts = [];
-    while (true) {
-      const url = `https://api.nuvemshop.com.br/v1/${STORE_ID}/products?per_page=200&page=${page}`;
+
+    // Busca páginas em paralelo (5 por vez)
+    const fetchPage = async (p) => {
+      const url = `https://api.nuvemshop.com.br/v1/${STORE_ID}/products?per_page=200&page=${p}`;
       const response = await fetch(url, { headers: { 'Authentication': `bearer ${ACCESS_TOKEN}`, 'User-Agent': USER_AGENT } });
-      if (!response.ok) {
-        const errorText = await response.text();
-        return res.status(response.status).json({ error: errorText });
-      }
-      const data = await response.json();
-      if (!Array.isArray(data) || data.length === 0) break;
-      for (const item of data) allProducts.push(normalizeProduct(item));
-      if (data.length < 200) break;
-      page++;
+      if (!response.ok) throw new Error(`Erro na página ${p}: ${response.status}`);
+      return response.json();
+    };
+
+    // Busca primeira página para saber total
+    const firstPage = await fetchPage(1);
+    if (!Array.isArray(firstPage) || firstPage.length === 0) {
+      return res.status(200).json([]);
     }
+
+    for (const item of firstPage) allProducts.push(normalizeProduct(item));
+
+    // Calcula quantas páginas faltam
+    const totalPages = Math.ceil(3600 / 200); // Estimativa
+
+    // Busca páginas restantes em paralelo (5 por vez)
+    for (let batch = 2; batch <= totalPages + 2; batch += 5) {
+      const pages = [];
+      for (let i = batch; i < batch + 5; i++) {
+        pages.push(i);
+      }
+
+      const results = await Promise.allSettled(pages.map(p => fetchPage(p)));
+
+      let hasMore = false;
+      for (const result of results) {
+        if (result.status === 'fulfilled' && Array.isArray(result.value) && result.value.length > 0) {
+          for (const item of result.value) allProducts.push(normalizeProduct(item));
+          hasMore = true;
+        }
+      }
+
+      if (!hasMore) break;
+    }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[API] ${allProducts.length} produtos carregados em ${elapsed}ms`);
 
     // Salva no cache
     cachedProducts = allProducts;
@@ -100,7 +133,6 @@ export default async function handler(req, res) {
     return res.status(200).json(allProducts);
   } catch (error) {
     console.error('[API] Erro:', error.message);
-    // Se tem cache antigo, retorna ele
     if (cachedProducts) return res.status(200).json(cachedProducts);
     return res.status(500).json({ error: error.message });
   }

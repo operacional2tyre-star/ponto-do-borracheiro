@@ -1,40 +1,35 @@
 const API_URL = '/api';
 
 const mockProducts = [
-  {
-    id: 1,
-    name: '1 METRO DE MANGUEIRA PNEUMÁTICA DE POLIURETANO (PU) 8MM',
-    price: 13.00,
-    pricePix: 12.61,
-    image: '',
-    images: [],
-    category: 'Mangueiras',
-    stock: 45,
-    freeShipping: true,
-    isTop: true,
-    description: 'Mangueira de poliuretano (PU) de alta resistência.',
-    sku: 'MANG-PU-08MM'
-  },
-  {
-    id: 2,
-    name: 'PNEU ROADWELL 480.400-8 4 LONAS INDUSTRIAL',
-    price: 255.00,
-    pricePix: 247.35,
-    image: '',
-    images: [],
-    category: 'Pneus',
-    stock: 12,
-    freeShipping: true,
-    isTop: true,
-    description: 'Pneu para empilhadeira e equipamentos industriais.',
-    sku: 'PNEU-RW-480'
-  },
+  { id: 1, name: 'Carregando produtos...', price: 0, pricePix: 0, image: '', images: [], category: 'Acessórios', stock: 0, freeShipping: false, isTop: false, description: '', sku: '' },
 ];
 
 const categories = ['Todos', 'Pneus', 'Câmaras de Ar', 'Mangueiras', 'Kits', 'Colas e Remendos', 'Ferramentas', 'Bicos e Válvulas', 'Acessórios para Borracharia', 'Automação'];
 
+// Cache local no navegador
+let localCache = null;
+let localCacheTime = 0;
+const LOCAL_CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
 export async function getProducts(options = {}) {
   try {
+    // Retorna do cache local se válido
+    if (localCache && (Date.now() - localCacheTime) < LOCAL_CACHE_DURATION) {
+      let result = localCache;
+      if (options.category && options.category !== 'Todos') {
+        result = result.filter(p => p.category.toLowerCase() === options.category.toLowerCase());
+      }
+      if (options.search && options.search.trim()) {
+        const s = options.search.trim().toLowerCase();
+        result = result.filter(p =>
+          p.name.toLowerCase().includes(s) ||
+          (p.sku || '').toLowerCase().includes(s) ||
+          p.category.toLowerCase().includes(s)
+        );
+      }
+      return result;
+    }
+
     const response = await fetch(`${API_URL}/products`);
     if (!response.ok) throw new Error(`Erro na API (${response.status})`);
 
@@ -44,6 +39,10 @@ export async function getProducts(options = {}) {
     if (rawList.length === 0) {
       return mockProducts;
     }
+
+    // Salva no cache local
+    localCache = rawList;
+    localCacheTime = Date.now();
 
     let result = rawList;
 
