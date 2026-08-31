@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import FloatingChat from './FloatingChat';
+import NotificationPrompt from './NotificationPrompt';
 
 export default function Layout() {
   return (
@@ -9,6 +10,7 @@ export default function Layout() {
       <Outlet />
       <BottomNav />
       <FloatingChat />
+      <NotificationPrompt />
     </div>
   );
 }

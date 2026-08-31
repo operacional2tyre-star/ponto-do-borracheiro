@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, isSupported } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBldIRRDANsSRZPAlctf_UnW2J851IPXh8",
@@ -14,4 +15,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Messaging (notificações) — só inicializa se suportado
+export let messaging = null;
+
+isSupported().then((supported) => {
+  if (supported) {
+    messaging = getMessaging(app);
+  } else {
+    console.log('[Firebase] Messaging não suportado neste dispositivo');
+  }
+}).catch(() => {
+  console.log('[Firebase] Erro ao verificar suporte a messaging');
+});
+
 export default app;
