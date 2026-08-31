@@ -1,18 +1,30 @@
+import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, auditLog } from './middleware/security.js';
+
 let cachedProducts = null;
 let cacheTime = 0;
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+const CACHE_DURATION = 30 * 60 * 1000;
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+  securityHeaders(res);
+  corsHeaders(res, req.headers.origin);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Retorna do cache se ainda válido
+  if (!validateOrigin(req)) {
+    auditLog('BLOCKED_ORIGIN', { origin: req.headers.origin });
+    return res.status(403).json({ error: 'Origem não autorizada' });
+  }
+
+  const rateLimit = checkServerRateLimit(req, '/api/products');
+  if (!rateLimit.allowed) {
+    auditLog('RATE_LIMITED', { ip: req.headers['x-forwarded-for'] });
+    return res.status(429).json({ error: 'Muitas requisições' });
+  }
+
+  res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+
   if (cachedProducts && (Date.now() - cacheTime) < CACHE_DURATION) {
     console.log(`[API] Retornando ${cachedProducts.length} produtos do cache`);
     return res.status(200).json(cachedProducts);
@@ -84,7 +96,6 @@ export default async function handler(req, res) {
     let page = 1;
     const allProducts = [];
 
-    // Busca páginas em paralelo (5 por vez)
     const fetchPage = async (p) => {
       const url = `https://api.nuvemshop.com.br/v1/${STORE_ID}/products?per_page=200&page=${p}`;
       const response = await fetch(url, { headers: { 'Authentication': `bearer ${ACCESS_TOKEN}`, 'User-Agent': USER_AGENT } });
@@ -92,7 +103,6 @@ export default async function handler(req, res) {
       return response.json();
     };
 
-    // Busca primeira página para saber total
     const firstPage = await fetchPage(1);
     if (!Array.isArray(firstPage) || firstPage.length === 0) {
       return res.status(200).json([]);
@@ -100,10 +110,8 @@ export default async function handler(req, res) {
 
     for (const item of firstPage) allProducts.push(normalizeProduct(item));
 
-    // Calcula quantas páginas faltam
-    const totalPages = Math.ceil(3600 / 200); // Estimativa
+    const totalPages = Math.ceil(3600 / 200);
 
-    // Busca páginas restantes em paralelo (5 por vez)
     for (let batch = 2; batch <= totalPages + 2; batch += 5) {
       const pages = [];
       for (let i = batch; i < batch + 5; i++) {
@@ -126,13 +134,15 @@ export default async function handler(req, res) {
     const elapsed = Date.now() - startTime;
     console.log(`[API] ${allProducts.length} produtos carregados em ${elapsed}ms`);
 
-    // Salva no cache
     cachedProducts = allProducts;
     cacheTime = Date.now();
+
+    auditLog('PRODUCTS_LOADED', { count: allProducts.length, elapsed });
 
     return res.status(200).json(allProducts);
   } catch (error) {
     console.error('[API] Erro:', error.message);
+    auditLog('PRODUCTS_ERROR', { error: error.message });
     if (cachedProducts) return res.status(200).json(cachedProducts);
     return res.status(500).json({ error: error.message });
   }

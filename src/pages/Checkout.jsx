@@ -49,45 +49,39 @@ export default function Checkout() {
 
   const handleFinishOrder = async () => {
     setLoading(true);
+      // Validação server-side antes de salvar
     try {
-      const orderData = {
-        clientId: user?.uid || 'anonimo',
-        clientName: form.name,
-        clientEmail: user?.email || '',
-        clientPhone: form.phone,
-        address: {
-          street: form.address,
-          number: form.number,
-          complement: form.complement,
-          neighborhood: form.neighborhood,
-          city: form.city,
-          state: form.state,
-          cep: form.cep,
-        },
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          pricePix: item.pricePix || item.price,
-          quantity: item.quantity,
-          image: item.image,
-        })),
-        total: totalPrice,
-        totalPix: totalPricePix,
-        paymentMethod,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      };
+      const verifyResponse = await fetch('/api/verify-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          total: paymentMethod === 'pix' ? totalPricePix : totalPrice,
+          paymentMethod,
+          customer: {
+            name: form.name,
+            phone: form.phone,
+          },
+        }),
+      });
 
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
-      setOrderId(docRef.id);
-      clearCart();
-      setStep(3);
-    } catch (error) {
-      console.error('Erro ao salvar pedido:', error);
-      alert('Erro ao finalizar pedido. Tente novamente.');
-    } finally {
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        alert(verifyResult.details?.join('\n') || 'Erro ao validar pedido. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+    } catch (verifyError) {
+      console.error('Erro na verificação:', verifyError);
+      alert('Erro ao validar pedido. Tente novamente.');
       setLoading(false);
+      return;
     }
   };
 
