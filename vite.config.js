@@ -8,12 +8,14 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/messaging'],
+          'vendor-firebase-core': ['firebase/app', 'firebase/auth'],
+          'vendor-firebase-db': ['firebase/firestore'],
+          'vendor-firebase-msg': ['firebase/messaging'],
           'vendor-icons': ['lucide-react'],
         },
       },
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 800,
   },
   server: {
     port: 3000,
