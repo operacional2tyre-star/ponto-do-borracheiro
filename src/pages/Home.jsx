@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, SlidersHorizontal, ChevronRight, LayoutGrid, X, ChevronLeft } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -15,12 +15,16 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [activeSlide, setActiveSlide] = useState(0);
 
+  const dragStartRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const autoSlideRef = useRef(null);
+  const bannerRef = useRef(null);
+
   useEffect(() => { loadProducts(); }, []);
 
   const loadProducts = async () => {
     setLoading(true);
     const data = await getProducts();
-    // Filtra produtos sem preço ou sem estoque
     const validProducts = (data || []).filter((p) => {
       const price = parseFloat(p.price) || 0;
       const stock = p.stock ?? p.stock_quantity ?? 0;
@@ -31,66 +35,88 @@ export default function Home() {
   };
 
   const categoriesList = [
-    {
-      id: 'Pneus',
-      name: 'Pneus',
-      bg: '#FFF1F1',
-      img: '/categorias/categoria-pneus.png',
-    },
-    {
-      id: 'Câmaras de Ar',
-      name: 'Câmaras',
-      bg: '#F0F4FF',
-      img: '/categorias/categoria-camara-de-ar.png',
-    },
-    {
-      id: 'Mangueiras',
-      name: 'Mangueiras',
-      bg: '#F0F0F0',
-      img: '/categorias/categoria-mangueiras.png',
-    },
-    {
-      id: 'Kits',
-      name: 'Kits',
-      bg: '#FFF1F1',
-      img: '/categorias/categoria-kits.png',
-    },
-    {
-      id: 'Colas e Remendos',
-      name: 'Remendos',
-      bg: '#FFFBF0',
-      img: '/categorias/categoria-conexoes.png',
-    },
-    {
-      id: 'Ferramentas',
-      name: 'Ferramentas',
-      bg: '#F5F5F5',
-      img: '/categorias/categoria-abracadeiras.png',
-    },
-    {
-      id: 'Bicos e Válvulas',
-      name: 'Bicos',
-      bg: '#F0F6FF',
-      img: '/categorias/categoria-conexoes.png',
-    },
-    {
-      id: 'Acessórios para Borracharia',
-      name: 'Acessórios',
-      bg: '#FFFBF0',
-      img: '/categorias/categoria-acessorios.png',
-    },
+    { id: 'Pneus', name: 'Pneus', bg: '#FFF1F1', img: '/categorias/categoria-pneus.png' },
+    { id: 'Câmaras de Ar', name: 'Câmaras', bg: '#F0F4FF', img: '/categorias/categoria-camara-de-ar.png' },
+    { id: 'Mangueiras', name: 'Mangueiras', bg: '#F0F0F0', img: '/categorias/categoria-mangueiras.png' },
+    { id: 'Kits', name: 'Kits', bg: '#FFF1F1', img: '/categorias/categoria-kits.png' },
+    { id: 'Colas e Remendos', name: 'Remendos', bg: '#FFFBF0', img: '/categorias/cola-e-remendo.png' },
+    { id: 'Ferramentas', name: 'Ferramentas', bg: '#F5F5F5', img: '/categorias/categoria-abracadeiras.png' },
+    { id: 'Bicos e Válvulas', name: 'Bicos', bg: '#F0F6FF', img: '/categorias/categoria-conexoes.png' },
+    { id: 'Acessórios para Borracharia', name: 'Acessórios', bg: '#FFFBF0', img: '/categorias/categoria-acessorios.png' },
   ];
 
   const bannerOffers = [
-  { title: 'Ofertas da semana', subtitle: 'Peças e acessórios para sua oficina', buttonText: 'Ver ofertas', productImg: '/banners/banner-ofertas-da-semana.png', category: 'Todos' },
-  { title: 'Pneus em Destaque', subtitle: 'Pneus industriais de alta resistência', buttonText: 'Ver Pneus', productImg: '/banners/banner-pneus.png', category: 'Pneus' },
-  { title: 'Kits & Remendos', subtitle: 'Kits vulcanizantes e colas profissionais', buttonText: 'Ver Kits', productImg: '/banners/banner-kits.png', category: 'Kits' },
-];
+    { title: 'Ofertas da semana', subtitle: 'Peças e acessórios para sua oficina', buttonText: 'Ver ofertas', productImg: '/banners/banner-ofertas-da-semana.png', category: 'Todos' },
+    { title: 'Pneus em Destaque', subtitle: 'Pneus industriais de alta resistência', buttonText: 'Ver Pneus', productImg: '/banners/banner-pneus.png', category: 'Pneus' },
+    { title: 'Kits & Remendos', subtitle: 'Kits vulcanizantes e colas profissionais', buttonText: 'Ver Kits', productImg: '/banners/banner-kits.png', category: 'Kits' },
+  ];
 
   useEffect(() => {
-    const interval = setInterval(() => setActiveSlide((prev) => (prev + 1) % bannerOffers.length), 4500);
-    return () => clearInterval(interval);
+    autoSlideRef.current = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % bannerOffers.length);
+    }, 4500);
+    return () => clearInterval(autoSlideRef.current);
   }, []);
+
+  const resetAutoSlide = () => {
+    clearInterval(autoSlideRef.current);
+    autoSlideRef.current = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % bannerOffers.length);
+    }, 4500);
+  };
+
+  const goToSlide = (direction) => {
+    if (direction === 'next') {
+      setActiveSlide((prev) => (prev + 1) % bannerOffers.length);
+    } else {
+      setActiveSlide((prev) => (prev - 1 + bannerOffers.length) % bannerOffers.length);
+    }
+    resetAutoSlide();
+  };
+
+  // Touch events
+  const handleTouchStart = (e) => {
+    dragStartRef.current = e.touches[0].clientX;
+    isDraggingRef.current = true;
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDraggingRef.current) return;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const endX = e.changedTouches[0].clientX;
+    const diff = dragStartRef.current - endX;
+    if (Math.abs(diff) > 50) {
+      goToSlide(diff > 0 ? 'next' : 'prev');
+    }
+  };
+
+  // Mouse events (para emulador/desktop)
+  const handleMouseDown = (e) => {
+    dragStartRef.current = e.clientX;
+    isDraggingRef.current = true;
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current) return;
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const diff = dragStartRef.current - e.clientX;
+    if (Math.abs(diff) > 50) {
+      goToSlide(diff > 0 ? 'next' : 'prev');
+    }
+  };
+
+  const handleMouseLeave = () => {
+    isDraggingRef.current = false;
+  };
 
   useEffect(() => { setCurrentPage(1); }, [selectedCategory, searchTerm]);
 
@@ -105,7 +131,6 @@ export default function Home() {
 
   const handleProductClick = (product) => navigate(`/product/${product.id}`);
   const handleCategorySelect = (catId) => setSelectedCategory(selectedCategory === catId ? 'Todos' : catId);
-  const currentOffer = bannerOffers[activeSlide];
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -114,24 +139,61 @@ export default function Home() {
 
   return (
     <div className="px-4 py-3 space-y-5">
-      {/* Banner */}
-      <div className="relative overflow-hidden rounded-3xl shadow-lg shadow-red-900/15">
-        <button
-          onClick={() => setSelectedCategory(currentOffer.category)}
-          className="block w-full"
+      {/* Banner - Arrastável com touch E mouse */}
+      <div className="relative">
+        <div
+          ref={bannerRef}
+          className="overflow-hidden rounded-3xl shadow-lg shadow-red-900/15 cursor-grab active:cursor-grabbing"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
         >
-          <img
-            src={currentOffer.productImg}
-            alt={currentOffer.title}
-            className="w-full h-[180px] object-cover rounded-3xl"
-          />
+          <div
+            className="flex transition-transform duration-500 ease-out"
+            style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+          >
+            {bannerOffers.map((offer, idx) => (
+              <div key={idx} className="w-full flex-shrink-0">
+                <button
+                  onClick={() => setSelectedCategory(offer.category)}
+                  className="block w-full"
+                >
+                  <img
+                    src={offer.productImg}
+                    alt={offer.title}
+                    className="w-full h-[220px] object-cover"
+                    draggable="false"
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Setas de navegação */}
+        <button
+          onClick={() => goToSlide('prev')}
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-90 transition-all"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <button
+          onClick={() => goToSlide('next')}
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-90 transition-all"
+        >
+          <ChevronRight size={18} />
         </button>
 
-        <div className="flex items-center justify-center gap-1.5 mt-3 pt-1">
+        {/* Dots */}
+        <div className="flex items-center justify-center gap-1.5 mt-3">
           {bannerOffers.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setActiveSlide(idx)}
+              onClick={() => { setActiveSlide(idx); resetAutoSlide(); }}
               className={`h-2 rounded-full transition-all duration-300 ${
                 activeSlide === idx ? 'w-5 bg-red-500' : 'w-2 bg-gray-300'
               }`}
@@ -167,9 +229,7 @@ export default function Home() {
                     src={cat.img}
                     alt={cat.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 </div>
                 <span className={`text-xs font-semibold ${isSelected ? 'text-red-600' : 'text-gray-800'}`}>
