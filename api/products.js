@@ -1,4 +1,4 @@
-import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, auditLog } from './middleware/security.js';
+﻿import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, auditLog } from './middleware/security.js';
 
 let cachedProducts = null;
 let cacheTime = 0;
@@ -14,13 +14,13 @@ export default async function handler(req, res) {
 
   if (!validateOrigin(req)) {
     auditLog('BLOCKED_ORIGIN', { origin: req.headers.origin });
-    return res.status(403).json({ error: 'Origem não autorizada' });
+    return res.status(403).json({ error: 'Origem nao autorizada' });
   }
 
   const rateLimit = checkServerRateLimit(req, '/api/products');
   if (!rateLimit.allowed) {
     auditLog('RATE_LIMITED', { ip: req.headers['x-forwarded-for'] });
-    return res.status(429).json({ error: 'Muitas requisições' });
+    return res.status(429).json({ error: 'Muitas requisicoes' });
   }
 
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=240');
@@ -35,34 +35,62 @@ export default async function handler(req, res) {
   const USER_AGENT = 'PontoDoBorracheiro (contato@pontodoborracheiro.com.br)';
 
   if (!ACCESS_TOKEN) {
-    return res.status(500).json({ error: 'Token não configurado' });
+    return res.status(500).json({ error: 'Token nao configurado' });
   }
 
   function detectCategory(name, nuvemshopCategories) {
-    if (Array.isArray(nuvemshopCategories) && nuvemshopCategories.length > 0) {
-      const rawName = (nuvemshopCategories[0]?.name?.pt || nuvemshopCategories[0]?.name || '').trim().toUpperCase();
-      if (rawName.includes('PNEU')) return 'Pneus';
-      if (rawName.includes('CAMARA') || rawName.includes('CÂMARA')) return 'Câmaras de Ar';
-      if (rawName.includes('MANGUEIRA')) return 'Mangueiras';
-      if (rawName.includes('KIT')) return 'Kits';
-      if (rawName.includes('COLA') || rawName.includes('REMENDO')) return 'Colas e Remendos';
-      if (rawName.includes('FERRAMENTA')) return 'Ferramentas';
-      if (rawName.includes('ACESSORIO') || rawName.includes('ACESSÓRIO') || rawName.includes('BORRACHARIA')) return 'Acessórios para Borracharia';
-      if (rawName.includes('AUTOMACAO') || rawName.includes('AUTOMAÇÃO')) return 'Automação';
-      if (rawName.includes('BICO') || rawName.includes('VALVULA') || rawName.includes('VÁLVULA')) return 'Bicos e Válvulas';
-      if (rawName.length > 0) return rawName;
+    const CATEGORY_MAP = {
+      'PNEU': 'Pneus',
+      'PNEUS': 'Pneus',
+      'CAMARA': 'Cameras de Ar',
+      'CAMARAS': 'Cameras de Ar',
+      'MANGUEIRA': 'Mangueiras',
+      'MANGUEIRAS': 'Mangueiras',
+      'KIT': 'Kits',
+      'KITS': 'Kits',
+      'COLA': 'Colas e Remendos',
+      'COLAS': 'Colas e Remendos',
+      'REMENDO': 'Colas e Remendos',
+      'REMENDOS': 'Colas e Remendos',
+      'FERRAMENTA': 'Ferramentas',
+      'FERRAMENTAS': 'Ferramentas',
+      'BICO': 'Bicos e Valvulas',
+      'BICOS': 'Bicos e Valvulas',
+      'VALVULA': 'Bicos e Valvulas',
+      'VALVULAS': 'Bicos e Valvulas',
+      'ACESSORIO': 'Acessorios para Borracharia',
+      'ACESSORIOS': 'Acessorios para Borracharia',
+      'BORRACHARIA': 'Acessorios para Borracharia',
+      'AUTOMACAO': 'Automacao',
+      'ABRACADEIRA': 'Acessorios para Borracharia',
+      'ABRACADEIRAS': 'Acessorios para Borracharia',
+    };
+
+    if (Array.isArray(nuvemshopCategories)) {
+      for (const cat of nuvemshopCategories) {
+        const catName = (cat?.name?.pt || cat?.name || '').trim().toUpperCase();
+        if (CATEGORY_MAP[catName]) {
+          return CATEGORY_MAP[catName];
+        }
+        for (const [keyword, category] of Object.entries(CATEGORY_MAP)) {
+          if (catName.includes(keyword)) {
+            return category;
+          }
+        }
+      }
     }
+
     const upper = (name || '').toUpperCase();
     if (upper.includes('PNEU')) return 'Pneus';
-    if (upper.includes('CAMARA') || upper.includes('CÂMARA')) return 'Câmaras de Ar';
+    if (upper.includes('CAMARA')) return 'Cameras de Ar';
     if (upper.includes('MANGUEIRA') || upper.includes('CABELINHO') || upper.includes('TUBO PU') || upper.includes('ESPIRAL')) return 'Mangueiras';
     if (upper.includes('KIT') || upper.includes('ESTOJO')) return 'Kits';
     if (upper.includes('COLA') || upper.includes('REMENDO') || upper.includes('VULCAFLEX')) return 'Colas e Remendos';
     if (upper.includes('CHAVE') || upper.includes('CALIBRADOR') || upper.includes('ALICATE') || upper.includes('PISTOLA') || upper.includes('TORQUIMETRO') || upper.includes('FERRAMENTA')) return 'Ferramentas';
-    if (upper.includes('BICO') || upper.includes('VALVULA') || upper.includes('VÁLVULA')) return 'Bicos e Válvulas';
-    if (upper.includes('AUTOMACAO') || upper.includes('AUTOMAÇÃO') || upper.includes('SENSOR')) return 'Automação';
-    if (upper.includes('ABRACADEIRA') || upper.includes('ABRAÇADEIRA') || upper.includes('ENGATE') || upper.includes('ADAPTADOR') || upper.includes('NIPLE')) return 'Acessórios para Borracharia';
-    return 'Acessórios para Borracharia';
+    if (upper.includes('BICO') || upper.includes('VALVULA')) return 'Bicos e Valvulas';
+    if (upper.includes('AUTOMACAO') || upper.includes('SENSOR')) return 'Automacao';
+    if (upper.includes('ABRACADEIRA') || upper.includes('ENGATE') || upper.includes('ADAPTADOR') || upper.includes('NIPLE')) return 'Acessorios para Borracharia';
+    return 'Acessorios para Borracharia';
   }
 
   function getName(p) {
@@ -99,7 +127,7 @@ export default async function handler(req, res) {
     const fetchPage = async (p) => {
       const url = `https://api.nuvemshop.com.br/v1/${STORE_ID}/products?per_page=200&page=${p}`;
       const response = await fetch(url, { headers: { 'Authentication': `bearer ${ACCESS_TOKEN}`, 'User-Agent': USER_AGENT } });
-      if (!response.ok) throw new Error(`Erro na página ${p}: ${response.status}`);
+      if (!response.ok) throw new Error(`Erro na pagina ${p}: ${response.status}`);
       return response.json();
     };
 
@@ -130,6 +158,12 @@ export default async function handler(req, res) {
 
       if (!hasMore) break;
     }
+
+    const categoryCount = {};
+    allProducts.forEach(p => {
+      categoryCount[p.category] = (categoryCount[p.category] || 0) + 1;
+    });
+    console.log('[API] Categorias:', JSON.stringify(categoryCount));
 
     const elapsed = Date.now() - startTime;
     console.log(`[API] ${allProducts.length} produtos carregados em ${elapsed}ms`);
