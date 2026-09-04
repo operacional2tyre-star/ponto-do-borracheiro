@@ -1,8 +1,8 @@
-﻿import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, auditLog } from './middleware/security.js';
+import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, auditLog } from './middleware/security.js';
 
 let cachedProducts = null;
 let cacheTime = 0;
-const CACHE_DURATION = 2 * 60 * 1000;
+const CACHE_DURATION = 15 * 60 * 1000;
 
 export default async function handler(req, res) {
   securityHeaders(res);
@@ -23,10 +23,10 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Muitas requisicoes' });
   }
 
-  res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=240');
+  res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800');
 
   if (cachedProducts && (Date.now() - cacheTime) < CACHE_DURATION) {
-    console.log(`[API] Retornando ${cachedProducts.length} produtos do cache`);
+    console.log('[API] Retornando cache');
     return res.status(200).json(cachedProducts);
   }
 
@@ -40,10 +40,11 @@ export default async function handler(req, res) {
 
   function detectCategory(name, nuvemshopCategories) {
     const CATEGORY_MAP = {
-      'PNEU': 'Pneus',
       'PNEUS': 'Pneus',
-      'CAMARA': 'Cameras de Ar',
-      'CAMARAS': 'Cameras de Ar',
+      'PNEU': 'Pneus',
+      'CAMARA DE AR': 'Cameras de Ar',
+      'CAMARAS DE AR': 'Cameras de Ar',
+      'CAMERA DE AR': 'Cameras de Ar',
       'MANGUEIRA': 'Mangueiras',
       'MANGUEIRAS': 'Mangueiras',
       'KIT': 'Kits',
@@ -73,7 +74,7 @@ export default async function handler(req, res) {
           return CATEGORY_MAP[catName];
         }
         for (const [keyword, category] of Object.entries(CATEGORY_MAP)) {
-          if (catName.includes(keyword)) {
+          if (catName === keyword || catName.startsWith(keyword + ' ') || catName.endsWith(' ' + keyword) || catName.includes(' ' + keyword + ' ')) {
             return category;
           }
         }
@@ -81,15 +82,15 @@ export default async function handler(req, res) {
     }
 
     const upper = (name || '').toUpperCase();
-    if (upper.includes('PNEU')) return 'Pneus';
-    if (upper.includes('CAMARA')) return 'Cameras de Ar';
-    if (upper.includes('MANGUEIRA') || upper.includes('CABELINHO') || upper.includes('TUBO PU') || upper.includes('ESPIRAL')) return 'Mangueiras';
-    if (upper.includes('KIT') || upper.includes('ESTOJO')) return 'Kits';
-    if (upper.includes('COLA') || upper.includes('REMENDO') || upper.includes('VULCAFLEX')) return 'Colas e Remendos';
-    if (upper.includes('CHAVE') || upper.includes('CALIBRADOR') || upper.includes('ALICATE') || upper.includes('PISTOLA') || upper.includes('TORQUIMETRO') || upper.includes('FERRAMENTA')) return 'Ferramentas';
-    if (upper.includes('BICO') || upper.includes('VALVULA')) return 'Bicos e Valvulas';
-    if (upper.includes('AUTOMACAO') || upper.includes('SENSOR')) return 'Automacao';
-    if (upper.includes('ABRACADEIRA') || upper.includes('ENGATE') || upper.includes('ADAPTADOR') || upper.includes('NIPLE')) return 'Acessorios para Borracharia';
+    if (/\bPNEU[S]?\b/.test(upper)) return 'Pneus';
+    if (/\bCAMARA[S]?\s+DE\s+AR\b/.test(upper)) return 'Cameras de Ar';
+    if (/\bMANGUEIRA[S]?\b/.test(upper) || /\bCABELINHO\b/.test(upper) || /\bTUBO\s+PU\b/.test(upper) || /\bESPIRAL\b/.test(upper)) return 'Mangueiras';
+    if (/\bKIT[S]?\b/.test(upper) || /\bESTOJO\b/.test(upper)) return 'Kits';
+    if (/\bCOLA[S]?\b/.test(upper) || /\bREMENDO[S]?\b/.test(upper) || /\bVULCAFLEX\b/.test(upper)) return 'Colas e Remendos';
+    if (/\bCHAVE\b/.test(upper) || /\bCALIBRADOR\b/.test(upper) || /\bALICATE\b/.test(upper) || /\bPISTOLA\b/.test(upper) || /\bTORQUIMETRO\b/.test(upper) || /\bFERRAMENTA[S]?\b/.test(upper)) return 'Ferramentas';
+    if (/\bBICO[S]?\b/.test(upper) || /\bVALVULA[S]?\b/.test(upper)) return 'Bicos e Valvulas';
+    if (/\bAUTOMACAO\b/.test(upper) || /\bSENSOR\b/.test(upper)) return 'Automacao';
+    if (/\bABRACADEIRA[S]?\b/.test(upper) || /\bENGATE\b/.test(upper) || /\bADAPTADOR\b/.test(upper) || /\bNIPLE\b/.test(upper)) return 'Acessorios para Borracharia';
     return 'Acessorios para Borracharia';
   }
 
@@ -125,9 +126,9 @@ export default async function handler(req, res) {
     const allProducts = [];
 
     const fetchPage = async (p) => {
-      const url = `https://api.nuvemshop.com.br/v1/${STORE_ID}/products?per_page=200&page=${p}`;
-      const response = await fetch(url, { headers: { 'Authentication': `bearer ${ACCESS_TOKEN}`, 'User-Agent': USER_AGENT } });
-      if (!response.ok) throw new Error(`Erro na pagina ${p}: ${response.status}`);
+      const url = 'https://api.nuvemshop.com.br/v1/' + STORE_ID + '/products?per_page=200&page=' + p;
+      const response = await fetch(url, { headers: { 'Authentication': 'bearer ' + ACCESS_TOKEN, 'User-Agent': USER_AGENT } });
+      if (!response.ok) throw new Error('Erro na pagina ' + p + ': ' + response.status);
       return response.json();
     };
 
@@ -166,7 +167,7 @@ export default async function handler(req, res) {
     console.log('[API] Categorias:', JSON.stringify(categoryCount));
 
     const elapsed = Date.now() - startTime;
-    console.log(`[API] ${allProducts.length} produtos carregados em ${elapsed}ms`);
+    console.log('[API] ' + allProducts.length + ' produtos carregados em ' + elapsed + 'ms');
 
     cachedProducts = allProducts;
     cacheTime = Date.now();
