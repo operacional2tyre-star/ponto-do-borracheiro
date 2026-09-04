@@ -8,7 +8,7 @@ const categories = ['Todos', 'Pneus', 'Câmaras de Ar', 'Mangueiras', 'Kits', 'C
 
 let localCache = null;
 let localCacheTime = 0;
-const LOCAL_CACHE_DURATION = 2 * 60 * 1000;
+const LOCAL_CACHE_DURATION = 15 * 60 * 1000;
 
 export async function getProducts(options = {}) {
   try {
@@ -19,11 +19,22 @@ export async function getProducts(options = {}) {
       }
       if (options.search && options.search.trim()) {
         const s = options.search.trim().toLowerCase();
-        result = result.filter(p =>
-          p.name.toLowerCase().includes(s) ||
-          (p.sku || '').toLowerCase().includes(s) ||
-          p.category.toLowerCase().includes(s)
-        );
+        result = result.filter(p => p.name.toLowerCase().includes(s) || (p.sku || '').toLowerCase().includes(s) || p.category.toLowerCase().includes(s));
+      }
+      return result;
+    }
+
+    const sessionCached = sessionStorage.getItem('products_cache');
+    if (sessionCached) {
+      localCache = JSON.parse(sessionCached);
+      localCacheTime = Date.now();
+      let result = localCache;
+      if (options.category && options.category !== 'Todos') {
+        result = result.filter(p => p.category.toLowerCase() === options.category.toLowerCase());
+      }
+      if (options.search && options.search.trim()) {
+        const s = options.search.trim().toLowerCase();
+        result = result.filter(p => p.name.toLowerCase().includes(s) || (p.sku || '').toLowerCase().includes(s) || p.category.toLowerCase().includes(s));
       }
       return result;
     }
@@ -34,27 +45,20 @@ export async function getProducts(options = {}) {
     const data = await response.json();
     const rawList = Array.isArray(data) ? data : (data.products || []);
 
-    if (rawList.length === 0) {
-      return mockProducts;
-    }
+    if (rawList.length === 0) return mockProducts;
 
     localCache = rawList;
     localCacheTime = Date.now();
+    sessionStorage.setItem('products_cache', JSON.stringify(rawList));
 
     let result = rawList;
-
     if (options.category && options.category !== 'Todos') {
       result = result.filter(p => p.category.toLowerCase() === options.category.toLowerCase());
     }
     if (options.search && options.search.trim()) {
       const s = options.search.trim().toLowerCase();
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(s) ||
-        (p.sku || '').toLowerCase().includes(s) ||
-        p.category.toLowerCase().includes(s)
-      );
+      result = result.filter(p => p.name.toLowerCase().includes(s) || (p.sku || '').toLowerCase().includes(s) || p.category.toLowerCase().includes(s));
     }
-
     return result;
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
@@ -65,13 +69,10 @@ export async function getProducts(options = {}) {
 export async function fetchProductById(id) {
   try {
     const response = await fetch(`${API_URL}/product?id=${id}`);
-    if (response.ok) {
-      return await response.json();
-    }
+    if (response.ok) return await response.json();
   } catch (err) {
     console.warn(`Erro ao buscar produto #${id}, buscando na lista...`);
   }
-
   const products = await getProducts();
   return products.find(p => String(p.id) === String(id));
 }
