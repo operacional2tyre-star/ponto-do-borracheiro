@@ -6,14 +6,12 @@ const mockProducts = [
 
 const categories = ['Todos', 'Pneus', 'Câmaras de Ar', 'Mangueiras', 'Kits', 'Colas e Remendos', 'Ferramentas', 'Bicos e Válvulas', 'Acessórios para Borracharia', 'Automação'];
 
-// Cache local no navegador
 let localCache = null;
 let localCacheTime = 0;
-const LOCAL_CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+const LOCAL_CACHE_DURATION = 2 * 60 * 1000;
 
 export async function getProducts(options = {}) {
   try {
-    // Retorna do cache local se válido
     if (localCache && (Date.now() - localCacheTime) < LOCAL_CACHE_DURATION) {
       let result = localCache;
       if (options.category && options.category !== 'Todos') {
@@ -40,7 +38,6 @@ export async function getProducts(options = {}) {
       return mockProducts;
     }
 
-    // Salva no cache local
     localCache = rawList;
     localCacheTime = Date.now();
 

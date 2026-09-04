@@ -2,7 +2,7 @@ import { securityHeaders, corsHeaders, checkServerRateLimit, validateOrigin, aud
 
 let cachedProducts = null;
 let cacheTime = 0;
-const CACHE_DURATION = 30 * 60 * 1000;
+const CACHE_DURATION = 2 * 60 * 1000;
 
 export default async function handler(req, res) {
   securityHeaders(res);
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Muitas requisições' });
   }
 
-  res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=240');
 
   if (cachedProducts && (Date.now() - cacheTime) < CACHE_DURATION) {
     console.log(`[API] Retornando ${cachedProducts.length} produtos do cache`);
