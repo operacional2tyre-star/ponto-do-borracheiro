@@ -21,20 +21,20 @@ export default function Home() {
   const bannerRef = useRef(null);
 
   const bannerOffers = [
-    { title: 'Ofertas da semana', subtitle: 'Peças e acessórios para sua oficina', buttonText: 'Ver ofertas', productImg: '/banners/banner-ofertas-da-semana.png', category: 'Todos' },
-    { title: 'Pneus em Destaque', subtitle: 'Pneus industriais de alta resistência', buttonText: 'Ver Pneus', productImg: '/banners/banner-pneus.png', category: 'Pneus' },
-    { title: 'Kits & Remendos', subtitle: 'Kits vulcanizantes e colas profissionais', buttonText: 'Ver Kits', productImg: '/banners/banner-kits.png', category: 'Kits' },
+    { title: 'Ofertas da semana', productImg: '/banners/banner-ofertas-da-semana.png', category: 'Todos' },
+    { title: 'Pneus em Destaque', productImg: '/banners/banner-pneus.png', category: 'Pneus' },
+    { title: 'Kits e Remendos', productImg: '/banners/banner-kits.png', category: 'Kits' },
   ];
 
   const categoriesList = [
     { id: 'Pneus', name: 'Pneus', bg: '#FFF1F1', img: '/categorias/categoria-pneus.png' },
-    { id: 'Câmaras de Ar', name: 'Câmaras', bg: '#F0F4FF', img: '/categorias/categoria-camara-de-ar.png' },
+    { id: 'Cameras de Ar', name: 'Cameras', bg: '#F0F4FF', img: '/categorias/categoria-camara-de-ar.png' },
     { id: 'Mangueiras', name: 'Mangueiras', bg: '#F0F0F0', img: '/categorias/categoria-mangueiras.png' },
     { id: 'Kits', name: 'Kits', bg: '#FFF1F1', img: '/categorias/categoria-kits.png' },
     { id: 'Colas e Remendos', name: 'Remendos', bg: '#FFFBF0', img: '/categorias/cola-e-remendo.png' },
     { id: 'Ferramentas', name: 'Ferramentas', bg: '#F5F5F5', img: '/categorias/categoria-abracadeiras.png' },
-    { id: 'Bicos e Válvulas', name: 'Bicos', bg: '#F0F6FF', img: '/categorias/categoria-conexoes.png' },
-    { id: 'Acessórios para Borracharia', name: 'Acessórios', bg: '#FFFBF0', img: '/categorias/categoria-acessorios.png' },
+    { id: 'Bicos e Valvulas', name: 'Bicos', bg: '#F0F6FF', img: '/categorias/categoria-conexoes.png' },
+    { id: 'Acessorios para Borracharia', name: 'Acessorios', bg: '#FFFBF0', img: '/categorias/categoria-acessorios.png' },
   ];
 
   useEffect(() => {
@@ -46,7 +46,6 @@ export default function Home() {
   }, []);
 
   const loadProducts = async () => {
-    setLoading(true);
     try {
       const cached = sessionStorage.getItem('products_cache');
       if (cached) {
@@ -121,7 +120,7 @@ export default function Home() {
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleProductClick = (product) => navigate(`/product/${product.id}`);
+  const handleProductClick = (product) => navigate('/product/' + product.id);
   const handleCategorySelect = (catId) => setSelectedCategory(selectedCategory === catId ? 'Todos' : catId);
 
   const handlePageChange = (page) => {
@@ -131,7 +130,6 @@ export default function Home() {
 
   return (
     <div className="px-4 py-3 space-y-5">
-      {/* Banner */}
       <div className="relative">
         <div
           ref={bannerRef}
@@ -144,7 +142,7 @@ export default function Home() {
         >
           <div
             className="flex transition-transform duration-500 ease-out"
-            style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+            style={{ transform: 'translateX(-' + activeSlide * 100 + '%)' }}
           >
             {bannerOffers.map((offer, idx) => (
               <div key={idx} className="w-full flex-shrink-0">
@@ -168,13 +166,12 @@ export default function Home() {
             <button
               key={idx}
               onClick={() => { setActiveSlide(idx); resetAutoSlide(); }}
-              className={`h-2 rounded-full transition-all duration-300 ${activeSlide === idx ? 'w-5 bg-red-500' : 'w-2 bg-gray-300'}`}
+              className={'h-2 rounded-full transition-all duration-300 ' + (activeSlide === idx ? 'w-5 bg-red-500' : 'w-2 bg-gray-300')}
             />
           ))}
         </div>
       </div>
 
-      {/* Categorias */}
       <div>
         <div className="flex items-center gap-2 mb-3 px-0.5">
           <LayoutGrid size={18} className="text-red-600" />
@@ -187,19 +184,18 @@ export default function Home() {
               <button
                 key={cat.id}
                 onClick={() => handleCategorySelect(cat.id)}
-                className={`flex flex-col items-center justify-center p-2.5 rounded-2xl transition-all duration-200 text-center active:scale-95 ${isSelected ? 'bg-red-50 border-2 border-red-500 shadow-sm' : 'bg-white border border-gray-100 shadow-xs'}`}
+                className={'flex flex-col items-center justify-center p-2.5 rounded-2xl transition-all duration-200 text-center active:scale-95 ' + (isSelected ? 'bg-red-50 border-2 border-red-500 shadow-sm' : 'bg-white border border-gray-100 shadow-xs')}
               >
                 <div className="w-12 h-12 rounded-full overflow-hidden shadow-inner mb-1.5 flex items-center justify-center" style={{ backgroundColor: cat.bg }}>
                   <img src={cat.img} alt={cat.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 </div>
-                <span className={`text-xs font-semibold ${isSelected ? 'text-red-600' : 'text-gray-800'}`}>{cat.name}</span>
+                <span className={'text-xs font-semibold ' + (isSelected ? 'text-red-600' : 'text-gray-800')}>{cat.name}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Busca */}
       <div className="flex items-center gap-2.5">
         <div className="relative flex-1">
           <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -221,7 +217,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Produtos */}
       <div>
         <div className="flex items-center justify-between mb-3 px-0.5">
           <h2 className="font-extrabold text-gray-900 text-base tracking-tight">
@@ -267,8 +262,8 @@ export default function Home() {
                   .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                   .reduce((acc, p, idx, arr) => { if (idx > 0 && arr[idx - 1] !== p - 1) acc.push('...'); acc.push(p); return acc; }, [])
                   .map((item, idx) =>
-                    item === '...' ? <span key={`dots-${idx}`} className="text-gray-400 text-sm px-1">...</span> : (
-                      <button key={item} onClick={() => handlePageChange(item)} className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all active:scale-95 shadow-xs ${currentPage === item ? 'bg-red-600 text-white border border-red-600' : 'bg-white text-gray-700 border border-gray-200'}`}>{item}</button>
+                    item === '...' ? <span key={'dots-' + idx} className="text-gray-400 text-sm px-1">...</span> : (
+                      <button key={item} onClick={() => handlePageChange(item)} className={'w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all active:scale-95 shadow-xs ' + (currentPage === item ? 'bg-red-600 text-white border border-red-600' : 'bg-white text-gray-700 border border-gray-200')}>{item}</button>
                     )
                   )}
                 <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 disabled:opacity-30 active:scale-95 transition-all shadow-xs">
@@ -276,7 +271,7 @@ export default function Home() {
                 </button>
               </div>
             )}
-            <p className="text-center text-xs text-gray-400 mt-2 pb-2">Página {currentPage} de {totalPages} — {filteredProducts.length} produtos</p>
+            <p className="text-center text-xs text-gray-400 mt-2 pb-2">Pagina {currentPage} de {totalPages} - {filteredProducts.length} produtos</p>
           </>
         )}
       </div>
